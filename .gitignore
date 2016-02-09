@@ -4,3 +4,4 @@ spectra
 *.pyc
 *.c
 *.so
+*.h5
