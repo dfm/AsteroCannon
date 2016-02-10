@@ -36,35 +36,36 @@ class AsteroCannon(object):
         return x0
 
     def fit(self, X, y):
-        self._X_min = np.min(X, axis=0)
-        self._X_max = np.max(X, axis=0)
         self._X_std = np.std(X, axis=0)
         self._X_mean = np.mean(X, axis=0)
-
         x = (X - self._X_mean[None, :]) / self._X_std[None, :]
+        self._X_min = np.min(x, axis=0)
+        self._X_max = np.max(x, axis=0)
 
         A = self._get_A(x)
         ATA = np.dot(A.T, A)
         alpha = np.dot(A.T, y - np.median(y, axis=1)[:, None])
         self.weights_ = np.linalg.solve(ATA, alpha)
 
-        # P_pred = np.dot(A, weights)
-
     def predict(self, X):
-        A = self._get_A(np.atleast_2d(X))
+        x = (np.atleast_2d(X) - self._X_mean[None, :]) / self._X_std[None, :]
+        A = self._get_A(x)
         return np.dot(A, self.weights_)
 
     def _nll(self, x, y):
-        mu = self.predict(np.atleast_2d(x))[0]
+        A = self._get_A(np.atleast_2d(x))
+        mu = np.dot(A, self.weights_)[0]
         return 0.5 * np.sum((mu - y)**2)
 
     def infer_one(self, y, nrestarts=10):
+        yy = np.array(y)
+        yy -= np.median(y)
         best = (np.inf, None)
         d = self._X_max-self._X_min
         for _ in range(nrestarts):
             pos = self._X_min + d*np.random.rand(len(self._X_min))
-            r = minimize(self._nll, pos, args=(y, ),
+            r = minimize(self._nll, pos, args=(yy, ),
                          bounds=list(zip(self._X_min, self._X_max)))
             if r.fun < best[0]:
                 best = (r.fun, r.x)
-        return best[1]
+        return best[1] * self._X_std + self._X_mean
