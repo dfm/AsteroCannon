@@ -5,3 +5,4 @@ spectra
 *.c
 *.so
 *.h5
+*.pkl
